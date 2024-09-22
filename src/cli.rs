@@ -3,7 +3,28 @@ use clap::{arg, Command};
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub struct Cli {
-    pub cmd: Command,
+    cmd: Command,
+}
+
+#[derive(Debug, Clone)]
+pub struct ParsedArguments {
+    pub file:                 Option<String>,
+    pub folder:               Option<String>,
+    pub is_stdin:             bool,
+    pub is_debug:             bool,
+    pub output_folder_suffix: String,
+}
+
+impl Default for ParsedArguments {
+    fn default() -> Self {
+        Self {
+            file:                 Default::default(),
+            folder:               Default::default(),
+            is_stdin:             false,
+            is_debug:             false,
+            output_folder_suffix: "generated_csvs".to_string(),
+        }
+    }
 }
 
 impl Cli {
@@ -30,5 +51,39 @@ impl Cli {
             .arg(arg!(-o --outputFolderSuffix <OUTPUT_FOLDER_SUFFIX> "The output folder suffix"));
 
         Self { cmd }
+    }
+
+    pub fn parse_args(self) -> ParsedArguments {
+        let arg_matches = self.cmd.get_matches();
+
+        if let Some((current_subcmd, arg_matches)) = arg_matches.subcommand() {
+            match current_subcmd {
+                "file" => {
+                    return ParsedArguments {
+                        file: arg_matches
+                            .get_one::<String>("DOCUMENT")
+                            .cloned(),
+                        ..Default::default()
+                    }
+                }
+                "folder" => {
+                    return ParsedArguments {
+                        folder: arg_matches
+                            .get_one::<String>("FOLDER")
+                            .cloned(),
+                        ..Default::default()
+                    }
+                }
+
+                "stdin" => {
+                    return ParsedArguments {
+                        is_stdin: true,
+                        ..Default::default()
+                    }
+                }
+                _ => unreachable!(),
+            }
+        }
+        unreachable!()
     }
 }

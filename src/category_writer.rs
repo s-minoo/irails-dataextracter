@@ -2,6 +2,7 @@ use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufWriter, Write};
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, RwLock};
 
 use rayon::prelude::*;
@@ -14,15 +15,25 @@ type ArcMutex<T> = Arc<Mutex<T>>;
 
 #[derive(Debug)]
 pub struct CategoryWriter {
-    pub output_prefix:   String,
+    pub output_dir:      PathBuf,
     category_writer_map: Mutex<HashMap<String, ArcMutex<BufWriter<File>>>>,
     category_header_map: Mutex<HashMap<String, bool>>,
 }
 
+impl Default for CategoryWriter {
+    fn default() -> Self {
+        Self {
+            output_dir:          Default::default(),
+            category_writer_map: Default::default(),
+            category_header_map: Default::default(),
+        }
+    }
+}
+
 impl CategoryWriter {
-    pub fn new(output_prefix: &str) -> CategoryWriter {
+    pub fn new(output_dir: &Path) -> CategoryWriter {
         CategoryWriter {
-            output_prefix:       output_prefix.to_string(),
+            output_dir:          output_dir.into(),
             category_writer_map: (HashMap::new().into()),
             category_header_map: (HashMap::new().into()),
         }
@@ -61,15 +72,10 @@ impl CategoryWriter {
         match category_map.get(&category) {
             Some(found_writer) => found_writer.clone(),
             None => {
+                let mut file_path = self.output_dir.clone();
+                file_path.push(format!("{}.csv", &category));
                 let writer: ArcMutex<_> = Arc::new(
-                    BufWriter::new(
-                        File::create(format!(
-                            "{}_{}.csv",
-                            &self.output_prefix, &category
-                        ))
-                        .unwrap(),
-                    )
-                    .into(),
+                    BufWriter::new(File::create(file_path).unwrap()).into(),
                 );
 
                 category_map.insert(category, writer.clone());

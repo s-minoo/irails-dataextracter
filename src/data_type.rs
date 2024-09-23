@@ -2,21 +2,22 @@ use std::collections::BTreeMap;
 
 #[derive(Debug, Clone)]
 pub struct Record {
-    pub map: BTreeMap<String, String>,
+    pub map:       BTreeMap<String, String>,
+    pub delimiter: String,
 }
 
 impl Record {
     pub fn to_headless_string(&self) -> String {
         self.map
             .values()
-            .into_iter()
             .map(|e| e.as_ref())
             .collect::<Vec<_>>()
-            .join(",")
+            .join(self.delimiter.as_str())
+            + "\n"
     }
 
     pub fn get_type(&self) -> String {
-        self.map.get("type").unwrap().to_string()
+        self.map.get("querytype").unwrap().to_string()
     }
 }
 
@@ -25,10 +26,9 @@ impl ToString for Record {
         let header = self
             .map
             .keys()
-            .into_iter()
             .map(|e| e.as_ref())
             .collect::<Vec<_>>()
-            .join(",");
+            .join(self.delimiter.as_str());
 
         header + "\n" + &self.to_headless_string()
     }
@@ -36,6 +36,9 @@ impl ToString for Record {
 
 impl From<BTreeMap<String, String>> for Record {
     fn from(value: BTreeMap<String, String>) -> Self {
-        Record { map: value }
+        Record {
+            map:       value,
+            delimiter: ";".to_string(),
+        }
     }
 }

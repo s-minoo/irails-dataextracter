@@ -10,24 +10,13 @@ use rayon::prelude::*;
 use crate::data_type::Record;
 use crate::error::CleanResult;
 
-type ArcRwLock<T> = Arc<RwLock<T>>;
 type ArcMutex<T> = Arc<Mutex<T>>;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct CategoryWriter {
     pub output_dir:      PathBuf,
     category_writer_map: Mutex<HashMap<String, ArcMutex<BufWriter<File>>>>,
     category_header_map: Mutex<HashMap<String, bool>>,
-}
-
-impl Default for CategoryWriter {
-    fn default() -> Self {
-        Self {
-            output_dir:          Default::default(),
-            category_writer_map: Default::default(),
-            category_header_map: Default::default(),
-        }
-    }
 }
 
 impl CategoryWriter {
@@ -46,7 +35,9 @@ impl CategoryWriter {
             .values()
             .try_for_each(|writer_lock| -> CleanResult<()> {
                 let mut writer = writer_lock.lock().unwrap();
-                Ok(writer.flush()?)
+                let result = Ok(writer.flush()?);
+                drop(writer);
+                result
             })
     }
 
@@ -61,6 +52,7 @@ impl CategoryWriter {
             let writer_lock = self.fetch_writer(category);
             let mut writer = writer_lock.lock().unwrap();
             self.process_record(record, &mut writer).unwrap();
+            drop(writer);
         });
 
         Ok(())

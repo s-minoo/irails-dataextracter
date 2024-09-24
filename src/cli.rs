@@ -55,7 +55,7 @@ impl Cli {
 
     pub fn parse_args(self) -> ParsedArguments {
         let arg_matches = self.cmd.get_matches();
-
+        let is_debug = *arg_matches.get_one::<u8>("debug").unwrap() > 0;
         if let Some((current_subcmd, arg_matches)) = arg_matches.subcommand() {
             match current_subcmd {
                 "file" => {
@@ -63,6 +63,7 @@ impl Cli {
                         file: arg_matches
                             .get_one::<String>("DOCUMENT")
                             .cloned(),
+                        is_debug,
                         ..Default::default()
                     }
                 }
@@ -71,6 +72,7 @@ impl Cli {
                         folder: arg_matches
                             .get_one::<String>("FOLDER")
                             .cloned(),
+                        is_debug,
                         ..Default::default()
                     }
                 }
@@ -78,6 +80,7 @@ impl Cli {
                 "stdin" => {
                     return ParsedArguments {
                         is_stdin: true,
+                        is_debug,
                         ..Default::default()
                     }
                 }

@@ -7,8 +7,10 @@ use std::str::FromStr;
 use category_writer::CategoryWriter;
 use cli::Cli;
 use error::CleanResult;
+use flate2::bufread::GzDecoder;
 use log::debug;
 use rayon::prelude::*;
+use tar::Archive;
 use utils::flatten_json;
 use walkdir::WalkDir;
 
@@ -54,13 +56,36 @@ fn process_folder(
 
             writer = CategoryWriter::new(&output_dir);
         } else if entry.file_type().is_file()
-            && entry.path().extension().unwrap() == "log"
+            && entry.path().extension().is_some()
         {
-            process_file(entry.path(), &mut writer, filter_query)?;
+            if entry.path().extension().unwrap() == "log" {
+                process_file(entry.path(), &mut writer, filter_query)?;
+            } else if entry.path().extension().unwrap() == "gz" {
+                let decompressed_log: PathBuf = decompress(entry.path())?;
+                debug!(
+                    "Decompressed file: {}",
+                    decompressed_log.to_string_lossy()
+                );
+                
+                fs::remove_file(entry.path())?;
+                process_file(&decompressed_log, &mut writer, filter_query)?;
+                fs::remove_file(&decompressed_log)?;
+            }
         }
     }
 
     Ok(())
+}
+
+fn decompress(path: &Path) -> CleanResult<PathBuf> {
+    let tar_gz = BufReader::new(File::open(path)?);
+    let tar = GzDecoder::new(tar_gz);
+    let mut log_file = Archive::new(tar);
+    log_file.unpack(path.parent().unwrap())?;
+    let tar_file_name = PathBuf::from(path.file_stem().unwrap());
+    let log_file_name = tar_file_name.file_stem().unwrap(); 
+
+    Ok(path.with_file_name(log_file_name))
 }
 
 fn process_file(

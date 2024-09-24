@@ -2,19 +2,19 @@ pub type CleanResult<T> = Result<T, ParseError>;
 
 #[derive(Debug)]
 pub enum ParseError {
-    IOError(std::io::Error),
-    JSONError(json::Error),
-    DataError(String), 
+    IO(std::io::Error),
+    Json(json::Error),
+    Data(String), 
 }
 
 impl From<std::io::Error> for ParseError {
     fn from(value: std::io::Error) -> Self {
-        ParseError::IOError(value)
+        ParseError::IO(value)
     }
 }
 
 impl From<json::Error> for ParseError {
     fn from(value: json::Error) -> Self {
-        ParseError::JSONError(value)
+        ParseError::Json(value)
     }
 }

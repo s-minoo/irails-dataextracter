@@ -4,6 +4,7 @@ pub type CleanResult<T> = Result<T, ParseError>;
 pub enum ParseError {
     IOError(std::io::Error),
     JSONError(json::Error),
+    DataError(String), 
 }
 
 impl From<std::io::Error> for ParseError {

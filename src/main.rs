@@ -67,7 +67,6 @@ fn process_folder(
                     decompressed_log.to_string_lossy()
                 );
                 
-                fs::remove_file(entry.path())?;
                 process_file(&decompressed_log, &mut writer, filter_query)?;
                 fs::remove_file(&decompressed_log)?;
             }

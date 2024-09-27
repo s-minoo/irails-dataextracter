@@ -8,7 +8,7 @@ use category_writer::CategoryWriter;
 use cli::Cli;
 use error::CleanResult;
 use flate2::bufread::GzDecoder;
-use log::debug;
+use log::{debug, error};
 use rayon::prelude::*;
 use tar::Archive;
 use utils::flatten_json;
@@ -61,14 +61,25 @@ fn process_folder(
             if entry.path().extension().unwrap() == "log" {
                 process_file(entry.path(), &mut writer, filter_query)?;
             } else if entry.path().extension().unwrap() == "gz" {
-                let decompressed_log: PathBuf = decompress(entry.path())?;
-                debug!(
-                    "Decompressed file: {}",
-                    decompressed_log.to_string_lossy()
-                );
-                
-                process_file(&decompressed_log, &mut writer, filter_query)?;
-                fs::remove_file(&decompressed_log)?;
+                let entry_path_str = entry.path().to_string_lossy();
+                debug!("Decompressing  file: {}", entry_path_str);
+                let decompressed_log_res: CleanResult<PathBuf> =
+                    decompress(entry.path());
+
+                if let Ok(decompressed_log) = decompressed_log_res {
+                    if decompressed_log.exists() {
+                        process_file(
+                            &decompressed_log,
+                            &mut writer,
+                            filter_query,
+                        )?;
+                        fs::remove_file(&decompressed_log)?;
+                    } else {
+                        error!("Archive log file is empty: {}", entry_path_str);
+                    }
+                } else {
+                    error!("Failed decompressing log file: {}", entry_path_str)
+                }
             }
         }
     }
@@ -82,7 +93,7 @@ fn decompress(path: &Path) -> CleanResult<PathBuf> {
     let mut log_file = Archive::new(tar);
     log_file.unpack(path.parent().unwrap())?;
     let tar_file_name = PathBuf::from(path.file_stem().unwrap());
-    let log_file_name = tar_file_name.file_stem().unwrap(); 
+    let log_file_name = tar_file_name.file_stem().unwrap();
 
     Ok(path.with_file_name(log_file_name))
 }

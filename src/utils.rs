@@ -1,5 +1,7 @@
 use std::collections::{BTreeMap, HashSet};
 
+use log::trace;
+
 use crate::data_type::Record;
 use crate::error::CleanResult;
 
@@ -17,7 +19,7 @@ pub fn flatten_json(
                 )));
             }
             if let Some(querytype) = object.get("querytype") {
-                if filter_set.contains(&querytype.to_string()) {
+                if filter_set.contains(&querytype.to_string().to_lowercase()) {
                     let parsed_entries: BTreeMap<_, _> = object
                         .iter()
                         .map(|(field, value)| {
@@ -27,9 +29,9 @@ pub fn flatten_json(
                     return Ok(parsed_entries.into());
                 }
             }
-            return Err(crate::error::ParseError::Data(
+            Err(crate::error::ParseError::Data(
                 "Input query type is filtered out ".to_string(),
-            ));
+            ))
         }
         _ => {
             Err(crate::error::ParseError::Data(format!(
